@@ -135,6 +135,7 @@ class BOTAN_TEST_API CPUID final
          CPUID_ARM_SHA2_512_BIT  = (1ULL << 21),
          CPUID_ARM_SM3_BIT       = (1ULL << 22),
          CPUID_ARM_SM4_BIT       = (1ULL << 23),
+	 CPUID_ARM_RND_BIT       = (1ULL << 24),
 #endif
 
          CPUID_INITIALIZED_BIT = (1ULL << 63)
@@ -222,6 +223,11 @@ class BOTAN_TEST_API CPUID final
       static bool has_arm_sm4()
          { return has_cpuid_bit(CPUID_ARM_SM4_BIT); }
 
+      /**
+      * Check if the processor supports ARMv8 RNDRRS
+      */
+      static bool has_arm_rndrrs()
+         { return has_cpuid_bit(CPUID_ARM_RND_BIT); }
 #endif
 
 #if defined(BOTAN_TARGET_CPU_IS_X86_FAMILY)

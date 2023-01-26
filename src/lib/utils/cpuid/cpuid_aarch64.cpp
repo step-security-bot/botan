@@ -61,6 +61,12 @@ uint64_t CPUID::CPUID_Data::detect_cpu_features(size_t* cache_line_size)
       ARCH_hwcap = 16, // AT_HWCAP
    };
 
+   enum ARM_hwcap_crypto_bit {
+      RND_bit = (1 << 16),
+ 
+      ARCH_hwcap_crypto = 26 // AT_HWCAP2
+   };
+
    const unsigned long hwcap = OS::get_auxval(ARM_hwcap_bit::ARCH_hwcap);
    if(hwcap & ARM_hwcap_bit::NEON_bit)
       {
@@ -83,6 +89,11 @@ uint64_t CPUID::CPUID_Data::detect_cpu_features(size_t* cache_line_size)
          detected_features |= CPUID::CPUID_ARM_SHA2_512_BIT;
       if(hwcap & ARM_hwcap_bit::SVE_bit)
          detected_features |= CPUID::CPUID_ARM_SVE_BIT;
+      }
+   const unsigned long hwcap_crypto = OS::get_auxval(ARM_hwcap_crypto_bit::ARCH_hwcap_crypto);
+   if(hwcap_crypto & ARM_hwcap_crypto_bit::RND_bit)
+      {
+      detected_features |= CPUID::CPUID_ARM_RND_BIT;
       }
 
 #elif defined(BOTAN_TARGET_OS_IS_IOS) || defined(BOTAN_TARGET_OS_IS_MACOS)

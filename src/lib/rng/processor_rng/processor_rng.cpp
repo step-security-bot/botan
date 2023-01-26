@@ -33,6 +33,13 @@ namespace {
     */
    const size_t HWRNG_RETRIES = 10;
 
+#elif BOTAN_COMPILER_HAS_BUILTIN(__builtin_arm_rndrrs) || BOTAN_COMPILER_HAS_BUILTIN(__builtin_aarch64_rndrrs)
+   /**
+    * Does not seem to have an official number
+    * but 512 seems a bit much
+    */
+   const size_t HWRNG_RETRIES = 10;
+
 #else
    /*
    * Lacking specific guidance we give the CPU quite a bit of leeway
@@ -63,6 +70,20 @@ hwrng_output read_hwrng(bool& success)
    cf = _rdrand64_step(&output);
 #endif
    success = (1 == cf);
+
+#elif BOTAN_COMPILER_HAS_BUILTIN(__builtin_arm_rndrrs) || BOTAN_COMPILER_HAS_BUILTIN(__builtin_aarch64_rndrrs)
+   /**
+    * apple devices do not seem to allow direct access to
+    * hardware random device on arm64 (aka TRNG).
+    * Here, fetching the value and status in one shot
+    */
+   hwrng_output status = 0;
+#if BOTAN_COMPILER_HAS_BUILTIN(__builtin_arm_rndrrs) && defined(__ARM_32BIT_STATE) && __ARM_32BIT_STATE
+   status = __builtin_arm_rndrrs(&output);
+#elif BOTAN_COMPILER_HAS_BUILTIN(__builtin_aarch64_rndrrs) && defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
+   status = __builtin_aarch64_rndrrs(&output);
+#endif
+   success = (status == 0xb0000);
 
 #elif defined(BOTAN_TARGET_CPU_IS_PPC_FAMILY)
 
@@ -111,6 +132,8 @@ bool Processor_RNG::available()
    {
 #if defined(BOTAN_TARGET_CPU_IS_X86_FAMILY)
    return CPUID::has_rdrand();
+#elif defined(BOTAN_TARGET_ARCH_IS_ARM64)
+   return CPUID::has_arm_rndrrs();
 #elif defined(BOTAN_TARGET_CPU_IS_PPC_FAMILY)
    return CPUID::has_darn_rng();
 #else
@@ -124,6 +147,8 @@ std::string Processor_RNG::name() const
    return "rdrand";
 #elif defined(BOTAN_TARGET_CPU_IS_PPC_FAMILY)
    return "darn";
+#elif defined(BOTAN_TARGET_ARCH_IS_ARM64)
+   return "rng";
 #else
    return "hwrng";
 #endif
