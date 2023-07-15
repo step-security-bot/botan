@@ -73,11 +73,6 @@ extern "C" char** environ;
    #include <pthread_np.h>
 #endif
 
-#if defined(BOTAN_TARGET_OS_HAS_WIN32) && defined(BOTAN_BUILD_COMPILER_IS_MSVC)
-   #include <processthreadsapi.h>
-   #include <stringapiset.h>
-#endif
-
 namespace Botan {
 
 // Not defined in OS namespace for historical reasons
@@ -621,31 +616,40 @@ void OS::page_named(void* page, size_t size) {
 }
 
 #if defined(BOTAN_TARGET_OS_HAS_THREADS)
-void OS::set_thread_name(std::thread& thread, const char* const name) {
-   int r;
-   auto hdl = thread.native_handle();
-   #if defined(BOTAN_TARGET_OS_IS_LINUX)
-   r = pthread_setname_np(hdl, name);
-   #elif defined(BOTAN_TARGET_OS_IS_FREEBSD)
-   r = pthread_set_name_np(hdl, name);
+void OS::set_thread_name(std::thread& thread, std::string& name) {
+   #if defined(BOTAN_TARGET_OS_IS_LINUX) || defined(BOTAN_TARGET_OS_IS_FREEBSD)
+   static_cast<void>(pthread_setname_np(thread.native_handle(), name.c_str()));
    #elif defined(BOTAN_TARGET_OS_IS_OPENBSD)
-   r = pthread_set_name_np(hdl, const_cast<char*>(name));
+   static_cast<void>(pthread_set_name_np(thread.native_handle(), name.c_str()));
    #elif defined(BOTAN_TARGET_OS_IS_NETBSD)
-   r = pthread_set_name_np(hdl, "%s", const_cast<char*>(name));
+   static_cast<void>(pthread_set_name_np(thread.native_handle(), "%s", const_cast<char*>(name.c_str())));
    #elif defined(BOTAN_TARGET_OS_HAS_WIN32) && defined(BOTAN_BUILD_COMPILER_IS_MSVC)
-   // This approach (as opposed to trigger an exception) is simpler
-   // also gives a chance to be in coredumps.
-   wchar_t val[16];
-   if(MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, name, -1, val, 16) > 0) {
-      r = SetThreadDescription(hdl, val);
-   }
+   const DWORD MS_VC_EXCEPTION = 0x406D1388;
+      #pragma pack(push, 8)
+
+   typedef struct tagTHREADNAME_INFO {
+         DWORD dwType;
+         LPCSTR szName;
+         INT dwThreadID;
+         DWORD dwFlags;
+   } THREADNAME_INFO;
+
+      #pragma pack(pop)
+   BOTAN_UNUSED(thread);
+   THREADNAME_INFO info;
+   info.dwType = 0x1000;
+   info.szName = name.c_str();
+   info.dwThreadID = -1;
+   info.dwFlags = 0;
+   __try {
+      RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR), reinterpret_cast<ULONG_PTR*>(&info));
+   } __except(EXCEPTION_EXECUTE_HANDLER) {}
    #else
    // TODO other possible oses ?
    // macOs does not seem to allow to name threads other than the current one.
-   BOTAN_UNUSED(hdl);
+   BOTAN_UNUSED(thread);
    BOTAN_UNUSED(name);
    #endif
-   BOTAN_UNUSED(r);
 }
 #endif
 

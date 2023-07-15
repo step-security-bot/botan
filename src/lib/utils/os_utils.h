@@ -153,7 +153,7 @@ void page_allow_access(void* page);
 void page_named(void* page, size_t size);
 
 #if defined(BOTAN_TARGET_OS_HAS_THREADS)
-void set_thread_name(std::thread& thread, const char* const name);
+void set_thread_name(std::thread& thread, std::string& name);
 #endif
 
 /**
