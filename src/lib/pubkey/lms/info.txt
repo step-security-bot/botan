@@ -1,0 +1,20 @@
+<defines>
+LMS -> 20230731
+</defines>
+
+<module_info>
+name -> "LMS"
+</module_info>
+
+<header:public>
+lms.h
+</header:public>
+
+<header:internal>
+lms_wots.h
+</header:internal>
+
+<requires>
+rng
+sha2_32
+</requires>
